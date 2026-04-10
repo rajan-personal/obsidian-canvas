@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { Editor, Tldraw, TLShapeId } from 'tldraw'
+import { Editor, Tldraw, TLShapeId, StateNode } from 'tldraw'
 import { createShapeId } from '@tldraw/editor'
 import 'tldraw/tldraw.css'
 import { NoteShapeUtil, NoteShape } from './shapes/NoteShapeUtil'
@@ -17,51 +17,60 @@ export default function App() {
 
   const handleMount = useCallback((editor: Editor) => {
     editorRef = editor
-    // Set dark mode
     editor.user.updateUserPreferences({ colorScheme: 'dark' })
 
-    const container = document.querySelector('.tl-container')
-    if (!container) return
+    // Override select tool idle state's onDoubleClick to create notes instead of text
+    const selectIdle = editor.getStateDescendant<StateNode>('select.idle')
+    if (selectIdle) {
+      const originalOnDoubleClick = selectIdle.onDoubleClick?.bind(selectIdle)
+      selectIdle.onDoubleClick = (info) => {
+        // If double-clicking on a shape, use default behavior (enters edit mode)
+        if (info.target === 'shape') {
+          originalOnDoubleClick?.(info)
+          return
+        }
 
-    container.addEventListener('dblclick', () => {
-      // Check if there's any shape at the click point — if so, don't create a new one
-      const pagePoint = editor.inputs.currentPagePoint
-      const shapesAtPoint = editor.getShapesAtPoint(pagePoint)
-      if (shapesAtPoint.length > 0) return
+        // On empty canvas, create a note instead of text
+        if (info.target === 'canvas') {
+          const { x, y } = editor.inputs.currentPagePoint
+          const id = createShapeId()
+          editor.createShape({
+            id,
+            type: NOTE_TYPE,
+            x: x - 110,
+            y: y - 20,
+            props: { w: 220, h: 40, text: '', color: 'yellow' },
+          })
+          editor.select(id)
+          editor.setEditingShape(id)
+          return
+        }
 
-      // Also check if tldraw is already editing a shape (user double-clicked a shape)
-      if (editor.getEditingShapeId()) return
-
-      const { x, y } = pagePoint
-      const id = createShapeId()
-      editor.createShape({
-        id,
-        type: NOTE_TYPE,
-        x: x - 100,
-        y: y - 18,
-        props: { w: 200, h: 36, text: '', color: 'yellow' },
-      })
-      editor.select(id)
-      editor.setEditingShape(id)
-    })
+        // Other targets: use default
+        originalOnDoubleClick?.(info)
+      }
+    }
 
     // Cmd+click to open markdown editor
-    container.addEventListener('click', (ev) => {
-      const e = ev as MouseEvent
-      if (!(e.metaKey || e.ctrlKey)) return
+    const container = document.querySelector('.tl-container')
+    if (container) {
+      container.addEventListener('click', (ev) => {
+        const e = ev as MouseEvent
+        if (!(e.metaKey || e.ctrlKey)) return
 
-      const pagePoint = editor.inputs.currentPagePoint
-      const shapesAtPoint = editor.getShapesAtPoint(pagePoint)
-      const note = shapesAtPoint.find(
-        (s): s is NoteShape => s.type === NOTE_TYPE
-      )
-      if (note) {
-        e.preventDefault()
-        e.stopPropagation()
-        setEditingText(note.props.text)
-        setEditingShapeId(note.id)
-      }
-    })
+        const pagePoint = editor.inputs.currentPagePoint
+        const shapesAtPoint = editor.getShapesAtPoint(pagePoint)
+        const note = shapesAtPoint.find(
+          (s): s is NoteShape => s.type === NOTE_TYPE
+        )
+        if (note) {
+          e.preventDefault()
+          e.stopPropagation()
+          setEditingText(note.props.text)
+          setEditingShapeId(note.id)
+        }
+      })
+    }
   }, [])
 
   const handleSave = useCallback((newText: string) => {
