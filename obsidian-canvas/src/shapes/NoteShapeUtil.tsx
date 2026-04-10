@@ -1,7 +1,6 @@
 import { BaseBoxShapeUtil, HTMLContainer, TLBaseShape, TLResizeInfo, useIsEditing, useEditor } from 'tldraw'
 import { NOTE_TYPE, noteShapeProps } from './NoteShape'
 import { useRef, useEffect, useCallback } from 'react'
-import '../styles/note.css'
 
 export type NoteShape = TLBaseShape<typeof NOTE_TYPE, {
   w: number
@@ -41,7 +40,18 @@ function NoteEditor({ shape }: { shape: NoteShape }) {
   return (
     <input
       ref={inputRef}
-      className="note-title-input"
+      style={{
+        width: '100%',
+        border: 'none',
+        outline: 'none',
+        background: 'transparent',
+        fontSize: '14px',
+        fontWeight: 500,
+        fontFamily: 'inherit',
+        color: '#dcddde',
+        padding: 0,
+        lineHeight: 1,
+      }}
       placeholder="Type a title..."
       onKeyDown={(e) => {
         e.stopPropagation()
@@ -98,6 +108,7 @@ export class NoteShapeUtil extends BaseBoxShapeUtil<NoteShape> {
     const isEditing = useIsEditing(shape.id)
     const firstLine = shape.props.text.split('\n')[0] || ''
     const hasContent = shape.props.text.trim().length > 0
+    const hasMoreLines = hasContent && shape.props.text.split('\n').length > 1
 
     return (
       <HTMLContainer
@@ -106,18 +117,43 @@ export class NoteShapeUtil extends BaseBoxShapeUtil<NoteShape> {
         }}
       >
         <div
-          className="note-card"
           data-note-id={shape.id}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            borderRadius: '8px',
+            border: '1px solid #666',
+            background: '#303030',
+            display: 'flex',
+            alignItems: 'center',
+            padding: '0 14px',
+            gap: '6px',
+            fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+            overflow: 'hidden',
+            boxSizing: 'border-box',
+          }}
         >
           {isEditing ? (
             <NoteEditor shape={shape} />
           ) : (
-            <span className={hasContent ? 'note-title' : 'note-title note-title-empty'}>
+            <span
+              style={{
+                fontSize: '14px',
+                fontWeight: 500,
+                color: hasContent ? '#dcddde' : '#666',
+                fontStyle: hasContent ? 'normal' : 'italic',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                flex: 1,
+                lineHeight: 1,
+              }}
+            >
               {hasContent ? firstLine || 'Untitled' : 'Untitled'}
             </span>
           )}
-          {hasContent && shape.props.text.split('\n').length > 1 && (
-            <span className="note-has-content">...</span>
+          {hasMoreLines && (
+            <span style={{ color: '#666', fontSize: '12px', flexShrink: 0 }}>...</span>
           )}
         </div>
       </HTMLContainer>
