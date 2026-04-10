@@ -17,6 +17,9 @@ export default function App() {
 
   const handleMount = useCallback((editor: Editor) => {
     editorRef = editor
+    // Set dark mode
+    editor.user.updateUserPreferences({ colorScheme: 'dark' })
+
     const container = document.querySelector('.tl-container')
     if (!container) return
 
