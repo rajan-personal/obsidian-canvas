@@ -1,0 +1,408 @@
+/* Theme tokens */
+:root {
+  --canvas-bg: #1e1e1e;
+  --surface: #262626;
+  --surface-hover: #2a2a2a;
+  --surface-active: #363636;
+  --border: #444;
+  --border-hover: #666;
+  --border-subtle: #3a3a3a;
+  --border-panel: #333;
+  --text-primary: #e0e0e0;
+  --text-secondary: #ccc;
+  --text-muted: #888;
+  --text-dim: #666;
+  --text-placeholder: #555;
+  --accent: #7c8aed;
+  --accent-bg: rgba(124, 138, 237, 0.08);
+  --danger: #e57373;
+  --selection-border: rgba(255, 255, 255, 0.35);
+  --selection-shadow: rgba(255, 255, 255, 0.15);
+  --shadow-dropdown: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-size-sm: 11px;
+  --font-size-xs: 9px;
+  --radius: 6px;
+  --radius-lg: 8px;
+}
+
+/* Canvas container */
+.canvas-container {
+  position: fixed;
+  inset: 0;
+  background: var(--canvas-bg);
+}
+
+/* Note node */
+.note-node {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-family: var(--font-sans);
+  transition: border-color 0.15s, box-shadow 0.15s;
+  cursor: grab;
+  position: relative;
+}
+
+.note-node.has-content {
+  border-width: 2px;
+}
+
+.note-node:hover {
+  border-color: var(--border-hover);
+}
+
+.note-node.selected {
+  border-color: var(--selection-border);
+  box-shadow: 0 0 0 1px var(--selection-shadow);
+}
+
+.note-content {
+  display: flex;
+  align-items: flex-start;
+  padding: 4px 10px;
+  gap: 4px;
+}
+
+.note-title {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  flex: 1;
+  line-height: 1.4;
+  cursor: text;
+}
+
+.note-title.empty {
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+.note-input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--text-primary);
+  padding: 0;
+  line-height: 1.4;
+  resize: none;
+  overflow: hidden;
+}
+
+.note-input::placeholder {
+  color: var(--text-placeholder);
+}
+
+.note-indicator {
+  color: var(--text-dim);
+  font-size: var(--font-size-xs);
+  flex-shrink: 0;
+}
+
+/* Node resizer */
+.note-resize-line {
+  border-color: transparent !important;
+}
+
+.note-resize-handle {
+  width: 6px !important;
+  height: 6px !important;
+  background: var(--accent) !important;
+  border: none !important;
+  border-radius: 50% !important;
+  opacity: 0.8;
+}
+
+/* Connection handles */
+.note-handle {
+  width: 3px !important;
+  height: 3px !important;
+  background: var(--border-panel) !important;
+  border: none !important;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.note-node:hover .note-handle,
+.note-node.selected .note-handle {
+  opacity: 1;
+}
+
+.note-handle:hover {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+}
+
+/* Workspace switcher */
+.workspace-switcher {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 100;
+  font-family: var(--font-sans);
+}
+
+.workspace-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 10px;
+  width: 220px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+
+.workspace-header:hover {
+  border-color: var(--border-hover);
+}
+
+.workspace-name {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.workspace-name-input {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.3;
+  background: transparent;
+  border: none;
+  outline: none;
+  flex: 1;
+  min-width: 0;
+  font-family: inherit;
+}
+
+.workspace-chevron {
+  color: var(--text-dim);
+  transition: transform 0.2s;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.workspace-chevron.open {
+  transform: rotate(180deg);
+}
+
+.workspace-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 220px;
+  background: var(--surface-hover);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-dropdown);
+  overflow: hidden;
+}
+
+.workspace-list {
+  padding: 4px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.workspace-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.workspace-item:hover {
+  background: var(--border-panel);
+}
+
+.workspace-item.active {
+  background: var(--surface-active);
+}
+
+.workspace-item-name {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.workspace-item.active .workspace-item-name {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.workspace-item-delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  color: var(--text-dim);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.1s, background 0.1s;
+  flex-shrink: 0;
+}
+
+.workspace-item:hover .workspace-item-delete {
+  opacity: 1;
+}
+
+.workspace-item-delete:hover {
+  background: #444;
+  color: var(--danger);
+}
+
+.workspace-divider {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 0;
+}
+
+.workspace-create-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+
+.workspace-create-btn:hover {
+  background: var(--border-panel);
+  color: var(--text-secondary);
+}
+
+.workspace-create-form {
+  padding: 8px 10px;
+}
+
+.workspace-create-input {
+  width: 100%;
+  padding: 6px 8px;
+  background: var(--canvas-bg);
+  border: 1px solid #4a4a4a;
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.workspace-create-input:focus {
+  border-color: var(--accent);
+}
+
+.workspace-create-input::placeholder {
+  color: var(--text-placeholder);
+}
+
+/* ReactFlow dark overrides */
+.react-flow__controls {
+  border: 1px solid var(--border-panel) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4) !important;
+}
+
+.react-flow__controls-button {
+  background: var(--surface-hover) !important;
+  border-bottom-color: var(--border-panel) !important;
+  fill: var(--text-secondary) !important;
+}
+
+.react-flow__controls-button:hover {
+  background: var(--border-subtle) !important;
+}
+
+/* Connection line */
+.react-flow__connection-path {
+  stroke: var(--accent) !important;
+  stroke-width: 2;
+}
+
+/* Selection box */
+.react-flow__selection {
+  border: 1px solid var(--accent) !important;
+  background: var(--accent-bg) !important;
+}
+
+/* Auth screen */
+.auth-screen {
+  position: fixed;
+  inset: 0;
+  background: var(--canvas-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-sans);
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.auth-btn {
+  padding: 10px 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.auth-btn:hover {
+  border-color: var(--border-hover);
+}
+
+/* Logout button */
+.logout-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 100;
+  padding: 6px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.logout-btn:hover {
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}

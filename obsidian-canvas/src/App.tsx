@@ -1,103 +1,254 @@
-import { useState, useCallback } from 'react'
-import { Editor, Tldraw, TLShapeId, StateNode } from 'tldraw'
-import { createShapeId } from '@tldraw/editor'
-import 'tldraw/tldraw.css'
-import { NoteShapeUtil, NoteShape } from './shapes/NoteShapeUtil'
-import { NOTE_TYPE } from './shapes/NoteShape'
-import { NoteColorPicker } from './components/NoteColorPicker'
+import { useCallback, useMemo, useRef, useState, useEffect } from 'react'
+import {
+  ReactFlow,
+  Background,
+  Controls,
+  MiniMap,
+  useNodesState,
+  useEdgesState,
+  type NodeTypes,
+  type EdgeTypes,
+  type ReactFlowInstance,
+  MarkerType,
+  ConnectionMode,
+  type Node,
+  type Edge,
+} from '@xyflow/react'
+import '@xyflow/react/dist/style.css'
+import { CanvasProvider } from './context/CanvasContext'
+import { NoteNode } from './components/NoteNode'
+import { FloatingEdge } from './components/FloatingEdge'
+import { SnapGuides } from './components/SnapGuides'
+import { WorkspaceSwitcher } from './components/WorkspaceSwitcher'
 import { MarkdownEditor } from './components/MarkdownEditor'
+import { useProjects, loadProjectData, saveProjectNodes, saveProjectEdges } from './hooks/useProjects'
+import { useSnapToNodes } from './hooks/useSnapToNodes'
+import { usePaneDoubleClick } from './hooks/usePaneDoubleClick'
+import './styles/canvas.css'
 
-const shapeUtils = [NoteShapeUtil]
+const nodeTypes: NodeTypes = { note: NoteNode }
+const edgeTypes: EdgeTypes = { floating: FloatingEdge }
 
-let editorRef: Editor | null = null
+const defaultEdgeOptions = {
+  type: 'floating',
+  markerEnd: { type: MarkerType.ArrowClosed, color: '#666' },
+  style: { stroke: '#666', strokeWidth: 2 },
+}
+
+let nodeId = 0
+function getNextId() {
+  return `node-${++nodeId}`
+}
+
+function restoreNodeId(nodes: Node[]) {
+  const maxId = nodes.reduce((max, n) => {
+    const num = parseInt(n.id.replace('node-', ''), 10)
+    return isNaN(num) ? max : Math.max(max, num)
+  }, 0)
+  nodeId = maxId
+}
 
 export default function App() {
-  const [editingShapeId, setEditingShapeId] = useState<TLShapeId | null>(null)
+  const {
+    projects,
+    activeProject,
+    activeId,
+    loading,
+    switchProject,
+    createProject,
+    renameProject,
+    deleteProject,
+  } = useProjects()
+
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
+  const [editingNodeId, setEditingNodeId] = useState<string | null>(null)
   const [editingText, setEditingText] = useState('')
+  const [autoEditId, setAutoEditId] = useState<string | null>(null)
+  const [dataLoaded, setDataLoaded] = useState(false)
+  const rfInstance = useRef<ReactFlowInstance<Node, Edge> | null>(null)
+  const getNodes = useCallback(() => rfInstance.current?.getNodes() ?? [], [])
+  const { guides, onNodeDrag, onNodeDragStop } = useSnapToNodes(getNodes)
 
-  const handleMount = useCallback((editor: Editor) => {
-    editorRef = editor
-    editor.user.updateUserPreferences({ colorScheme: 'dark' })
+  // Load nodes/edges when activeId changes
+  const prevActiveId = useRef<string | null>(null)
+  useEffect(() => {
+    if (!activeId || loading) return
+    if (prevActiveId.current === activeId) return
+    prevActiveId.current = activeId
+    setDataLoaded(false)
+    loadProjectData(activeId).then((data) => {
+      setNodes(data.nodes)
+      setEdges(data.edges)
+      restoreNodeId(data.nodes)
+      setEditingNodeId(null)
+      setEditingText('')
+      setDataLoaded(true)
+    })
+  }, [activeId, loading, setNodes, setEdges])
 
-    // Override select tool idle state's onDoubleClick to create notes instead of text
-    const selectIdle = editor.getStateDescendant<StateNode>('select.idle')
-    if (selectIdle) {
-      const originalOnDoubleClick = selectIdle.onDoubleClick?.bind(selectIdle)
-      selectIdle.onDoubleClick = (info) => {
-        // If double-clicking on a shape, use default behavior (enters edit mode)
-        if (info.target === 'shape') {
-          originalOnDoubleClick?.(info)
-          return
-        }
+  // Debounced persistence to D1
+  const saveTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const skipPersist = useRef(true)
 
-        // On empty canvas, create a note instead of text
-        if (info.target === 'canvas') {
-          const { x, y } = editor.inputs.currentPagePoint
-          const id = createShapeId()
-          editor.createShape({
-            id,
-            type: NOTE_TYPE,
-            x: x - 110,
-            y: y - 20,
-            props: { w: 220, h: 40, text: '', color: 'yellow' },
-          })
-          editor.select(id)
-          editor.setEditingShape(id)
-          return
-        }
+  useEffect(() => {
+    if (skipPersist.current || !dataLoaded || !activeId) return
+    clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(() => {
+      saveProjectNodes(activeId, nodes)
+    }, 500)
+    return () => clearTimeout(saveTimer.current)
+  }, [nodes, activeId, dataLoaded])
 
-        // Other targets: use default
-        originalOnDoubleClick?.(info)
+  const edgeSaveTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  useEffect(() => {
+    if (skipPersist.current || !dataLoaded || !activeId) return
+    clearTimeout(edgeSaveTimer.current)
+    edgeSaveTimer.current = setTimeout(() => {
+      saveProjectEdges(activeId, edges)
+    }, 500)
+    return () => clearTimeout(edgeSaveTimer.current)
+  }, [edges, activeId, dataLoaded])
+
+  // Enable persistence after first data load
+  useEffect(() => {
+    if (dataLoaded) skipPersist.current = false
+  }, [dataLoaded])
+
+  // Double-click canvas → new note
+  const handlePaneDoubleClick = useCallback(
+    (event: React.MouseEvent) => {
+      if (!rfInstance.current) return
+      const position = rfInstance.current.screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      })
+      const id = getNextId()
+      const newNode: Node = {
+        id,
+        type: 'note',
+        position: { x: position.x - 40, y: position.y - 14 },
+        data: { title: '', text: '', color: '#444' },
+        style: { width: 80 },
       }
-    }
+      setNodes((nds) => [...nds, newNode])
+      setAutoEditId(id)
+    },
+    [setNodes]
+  )
+  const onPaneClick = usePaneDoubleClick(handlePaneDoubleClick)
 
-    // Cmd+click to open markdown editor
-    const container = document.querySelector('.tl-container')
-    if (container) {
-      container.addEventListener('click', (ev) => {
-        const e = ev as MouseEvent
-        if (!(e.metaKey || e.ctrlKey)) return
-
-        const pagePoint = editor.inputs.currentPagePoint
-        const shapesAtPoint = editor.getShapesAtPoint(pagePoint)
-        const note = shapesAtPoint.find(
-          (s): s is NoteShape => s.type === NOTE_TYPE
+  const onUpdateNodeData = useCallback(
+    (nid: string, data: Record<string, unknown>) => {
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === nid ? { ...n, data: { ...n.data, ...data } } : n
         )
-        if (note) {
-          e.preventDefault()
-          e.stopPropagation()
-          setEditingText(note.props.text)
-          setEditingShapeId(note.id)
-        }
-      })
-    }
-  }, [])
+      )
+    },
+    [setNodes]
+  )
 
-  const handleSave = useCallback((newText: string) => {
-    if (editorRef && editingShapeId) {
-      editorRef.updateShape({
-        id: editingShapeId,
-        type: NOTE_TYPE,
-        props: { text: newText },
-      })
-    }
-  }, [editingShapeId])
+  const onNodeClick = useCallback(
+    (_event: React.MouseEvent, node: Node) => {
+      if (_event.metaKey || _event.ctrlKey) {
+        setEditingText((node.data as { text?: string }).text ?? '')
+        setEditingNodeId(node.id)
+      }
+    },
+    []
+  )
+
+  const onNodeDoubleClick = useCallback(
+    (_event: React.MouseEvent, node: Node) => {
+      setAutoEditId(node.id)
+    },
+    []
+  )
+
+  const handleSave = useCallback(
+    (newText: string) => {
+      if (!editingNodeId) return
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === editingNodeId ? { ...n, data: { ...n.data, text: newText } } : n
+        )
+      )
+    },
+    [editingNodeId, setNodes]
+  )
 
   const handleCloseEditor = useCallback(() => {
-    setEditingShapeId(null)
+    setEditingNodeId(null)
     setEditingText('')
   }, [])
 
+  const clearAutoEdit = useCallback(() => setAutoEditId(null), [])
+
+  const canvasContext = useMemo(
+    () => ({ updateNodeData: onUpdateNodeData, autoEditId, clearAutoEdit }),
+    [onUpdateNodeData, autoEditId, clearAutoEdit]
+  )
+
+  if (loading || !activeProject) {
+    return <div className="canvas-container" />
+  }
+
   return (
-    <div style={{ position: 'fixed', inset: 0 }}>
-      <Tldraw
-        persistenceKey="obsidian-canvas"
-        shapeUtils={shapeUtils}
-        onMount={handleMount}
+    <CanvasProvider value={canvasContext}>
+    <div className="canvas-container">
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onPaneClick={onPaneClick}
+        nodesConnectable={false}
+        onNodeClick={onNodeClick}
+        onNodeDoubleClick={onNodeDoubleClick}
+        onNodeDrag={onNodeDrag}
+        onNodeDragStop={onNodeDragStop}
+        zoomOnDoubleClick={false}
+        onInit={(instance) => {
+          rfInstance.current = instance
+          restoreNodeId(nodes)
+        }}
+        nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
+        defaultEdgeOptions={defaultEdgeOptions}
+        connectionMode={ConnectionMode.Loose}
+        edgesFocusable
+        edgesReconnectable
+        deleteKeyCode={['Backspace', 'Delete']}
+        fitView={nodes.length > 0}
+        fitViewOptions={{ maxZoom: 1 }}
+        proOptions={{ hideAttribution: true }}
+        colorMode="dark"
       >
-        <NoteColorPicker />
-      </Tldraw>
-      {editingShapeId && (
+        <SnapGuides guides={guides} />
+        <Background gap={24} size={1.5} color="#333" />
+        <Controls showInteractive={false} />
+        <MiniMap
+          nodeColor="#444"
+          maskColor="rgba(0,0,0,0.7)"
+          style={{ background: '#1a1a1a', border: '1px solid #333' }}
+        />
+      </ReactFlow>
+      <WorkspaceSwitcher
+        projects={projects}
+        activeProject={activeProject}
+        onSwitch={switchProject}
+        onCreate={createProject}
+        onRename={renameProject}
+        onDelete={deleteProject}
+      />
+      <button
+        className="logout-btn"
+        onClick={() => { window.location.href = '/api/auth/logout' }}
+      >
+        Sign out
+      </button>
+      {editingNodeId && (
         <MarkdownEditor
           text={editingText}
           onSave={handleSave}
@@ -105,5 +256,6 @@ export default function App() {
         />
       )}
     </div>
+    </CanvasProvider>
   )
 }
