@@ -88,7 +88,6 @@ export function NoteNode({ id, data, selected }: NodeProps) {
             {titleValue || '\u00A0'}
           </span>
         )}
-        {hasContent && <span className="note-indicator">...</span>}
       </div>
     </div>
   )

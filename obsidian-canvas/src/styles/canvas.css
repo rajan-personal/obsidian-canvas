@@ -45,7 +45,7 @@
 }
 
 .note-node.has-content {
-  border-width: 2px;
+  border-color: var(--accent);
 }
 
 .note-node:hover {
@@ -97,12 +97,6 @@
 
 .note-input::placeholder {
   color: var(--text-placeholder);
-}
-
-.note-indicator {
-  color: var(--text-dim);
-  font-size: var(--font-size-xs);
-  flex-shrink: 0;
 }
 
 /* Node resizer */
