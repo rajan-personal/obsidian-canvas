@@ -20,21 +20,26 @@ export default function App() {
     const container = document.querySelector('.tl-container')
     if (!container) return
 
-    container.addEventListener('dblclick', (e) => {
-      const target = e.target as HTMLElement
-      if (!target.closest('.note-card')) {
-        const { x, y } = editor.inputs.currentPagePoint
-        const id = createShapeId()
-        editor.createShape({
-          id,
-          type: NOTE_TYPE,
-          x: x - 100,
-          y: y - 18,
-          props: { w: 200, h: 36, text: '', color: 'yellow' },
-        })
-        editor.select(id)
-        editor.setEditingShape(id)
-      }
+    container.addEventListener('dblclick', () => {
+      // Check if there's any shape at the click point — if so, don't create a new one
+      const pagePoint = editor.inputs.currentPagePoint
+      const shapesAtPoint = editor.getShapesAtPoint(pagePoint)
+      if (shapesAtPoint.length > 0) return
+
+      // Also check if tldraw is already editing a shape (user double-clicked a shape)
+      if (editor.getEditingShapeId()) return
+
+      const { x, y } = pagePoint
+      const id = createShapeId()
+      editor.createShape({
+        id,
+        type: NOTE_TYPE,
+        x: x - 100,
+        y: y - 18,
+        props: { w: 200, h: 36, text: '', color: 'yellow' },
+      })
+      editor.select(id)
+      editor.setEditingShape(id)
     })
 
     // Cmd+click to open markdown editor
@@ -42,20 +47,14 @@ export default function App() {
       const e = ev as MouseEvent
       if (!(e.metaKey || e.ctrlKey)) return
 
-      const target = e.target as HTMLElement
-      const noteEl = target.closest('.note-card')
-      if (!noteEl) return
-
-      e.preventDefault()
-      e.stopPropagation()
-
-      // Find which note shape was clicked via the page point
       const pagePoint = editor.inputs.currentPagePoint
       const shapesAtPoint = editor.getShapesAtPoint(pagePoint)
       const note = shapesAtPoint.find(
         (s): s is NoteShape => s.type === NOTE_TYPE
       )
       if (note) {
+        e.preventDefault()
+        e.stopPropagation()
         setEditingText(note.props.text)
         setEditingShapeId(note.id)
       }
