@@ -6,16 +6,21 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, request, env })
   if (!user) return error('Not authenticated', 401)
   const projectId = params.id as string
   const { results } = await env.DB.prepare(
-    'SELECT id, type, position_x, position_y, width, data FROM nodes WHERE project_id = ?'
+    'SELECT id, type, position_x, position_y, width, height, data FROM nodes WHERE project_id = ?'
   ).bind(projectId).all()
 
-  const nodes = results.map((row: Record<string, unknown>) => ({
-    id: row.id,
-    type: row.type,
-    position: { x: row.position_x, y: row.position_y },
-    data: JSON.parse(row.data as string),
-    ...(row.width ? { style: { width: row.width } } : {}),
-  }))
+  const nodes = results.map((row: Record<string, unknown>) => {
+    const style: Record<string, unknown> = {}
+    if (row.width) style.width = row.width
+    if (row.height) style.height = row.height
+    return {
+      id: row.id,
+      type: row.type,
+      position: { x: row.position_x, y: row.position_y },
+      data: JSON.parse(row.data as string),
+      ...(Object.keys(style).length ? { style } : {}),
+    }
+  })
 
   return json(nodes)
 }
@@ -30,14 +35,14 @@ export const onRequestPut: PagesFunction<Env> = async ({ params, request, env })
     type?: string
     position: { x: number; y: number }
     data: Record<string, unknown>
-    style?: { width?: number }
+    style?: { width?: number; height?: number }
   }>
 
   const stmts = [
     env.DB.prepare('DELETE FROM nodes WHERE project_id = ?').bind(projectId),
     ...nodes.map((n) =>
       env.DB.prepare(
-        'INSERT INTO nodes (id, project_id, type, position_x, position_y, width, data) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        'INSERT INTO nodes (id, project_id, type, position_x, position_y, width, height, data) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
       ).bind(
         n.id,
         projectId,
@@ -45,6 +50,7 @@ export const onRequestPut: PagesFunction<Env> = async ({ params, request, env })
         n.position.x,
         n.position.y,
         n.style?.width ?? null,
+        n.style?.height ?? null,
         JSON.stringify(n.data)
       )
     ),

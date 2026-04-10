@@ -89,7 +89,16 @@ export async function loadProjectData(projectId: string): Promise<ProjectData> {
 }
 
 export async function saveProjectNodes(projectId: string, nodes: Node[]) {
-  await api.saveNodes(projectId, nodes)
+  // Normalize dimensions: ReactFlow stores resized width in node.width/measured.width
+  const normalized = nodes.map((n) => ({
+    ...n,
+    style: {
+      ...n.style,
+      width: n.width ?? n.measured?.width ?? n.style?.width,
+      height: n.height ?? n.measured?.height ?? n.style?.height,
+    },
+  }))
+  await api.saveNodes(projectId, normalized)
 }
 
 export async function saveProjectEdges(projectId: string, edges: Edge[]) {
