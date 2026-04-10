@@ -1,0 +1,76 @@
+.note-container {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.note-content {
+  flex: 1;
+  overflow: auto;
+  padding: 12px;
+}
+
+.note-markdown {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #1a1a1a;
+}
+
+.note-markdown h1 { font-size: 1.4em; margin: 0 0 0.4em; }
+.note-markdown h2 { font-size: 1.2em; margin: 0 0 0.3em; }
+.note-markdown h3 { font-size: 1.1em; margin: 0 0 0.3em; }
+.note-markdown p { margin: 0 0 0.5em; }
+.note-markdown ul, .note-markdown ol { margin: 0 0 0.5em; padding-left: 1.5em; }
+.note-markdown code {
+  background: rgba(0, 0, 0, 0.06);
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+.note-markdown pre {
+  background: rgba(0, 0, 0, 0.06);
+  padding: 8px;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+.note-markdown pre code {
+  background: none;
+  padding: 0;
+}
+.note-markdown blockquote {
+  border-left: 3px solid rgba(0, 0, 0, 0.2);
+  margin: 0 0 0.5em;
+  padding-left: 12px;
+  color: #555;
+}
+.note-markdown a { color: #2563eb; }
+.note-markdown hr { border: none; border-top: 1px solid rgba(0, 0, 0, 0.1); margin: 0.5em 0; }
+.note-markdown table { border-collapse: collapse; width: 100%; margin: 0 0 0.5em; }
+.note-markdown th, .note-markdown td { border: 1px solid rgba(0, 0, 0, 0.1); padding: 4px 8px; text-align: left; }
+.note-markdown th { background: rgba(0, 0, 0, 0.04); }
+
+.note-placeholder {
+  color: #999;
+  font-style: italic;
+  font-size: 14px;
+}
+
+.note-textarea {
+  width: 100%;
+  height: 100%;
+  border: none;
+  outline: none;
+  resize: none;
+  padding: 12px;
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  background: transparent;
+  color: #1a1a1a;
+  box-sizing: border-box;
+}
