@@ -1,5 +1,5 @@
 import { BaseBoxShapeUtil, HTMLContainer, TLBaseShape, TLResizeInfo, useIsEditing, useEditor } from 'tldraw'
-import { NOTE_TYPE, NOTE_COLORS, noteShapeProps } from './NoteShape'
+import { NOTE_TYPE, noteShapeProps } from './NoteShape'
 import { useRef, useEffect, useCallback } from 'react'
 import '../styles/note.css'
 
@@ -10,8 +10,8 @@ export type NoteShape = TLBaseShape<typeof NOTE_TYPE, {
   color: string
 }>
 
-const MIN_W = 120
-const MIN_H = 36
+const MIN_W = 140
+const MIN_H = 40
 
 function NoteEditor({ shape }: { shape: NoteShape }) {
   const editor = useEditor()
@@ -64,8 +64,8 @@ export class NoteShapeUtil extends BaseBoxShapeUtil<NoteShape> {
 
   getDefaultProps(): NoteShape['props'] {
     return {
-      w: 200,
-      h: 36,
+      w: 220,
+      h: 40,
       text: '',
       color: 'yellow',
     }
@@ -96,7 +96,6 @@ export class NoteShapeUtil extends BaseBoxShapeUtil<NoteShape> {
 
   component(shape: NoteShape) {
     const isEditing = useIsEditing(shape.id)
-    const bgColor = NOTE_COLORS[shape.props.color] || NOTE_COLORS.yellow
     const firstLine = shape.props.text.split('\n')[0] || ''
     const hasContent = shape.props.text.trim().length > 0
 
@@ -109,7 +108,6 @@ export class NoteShapeUtil extends BaseBoxShapeUtil<NoteShape> {
         <div
           className="note-card"
           data-note-id={shape.id}
-          style={{ backgroundColor: bgColor }}
         >
           {isEditing ? (
             <NoteEditor shape={shape} />
@@ -131,8 +129,8 @@ export class NoteShapeUtil extends BaseBoxShapeUtil<NoteShape> {
       <rect
         width={shape.props.w}
         height={shape.props.h}
-        rx={6}
-        ry={6}
+        rx={8}
+        ry={8}
       />
     )
   }
