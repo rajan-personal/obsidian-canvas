@@ -3,6 +3,7 @@ import { createShapeId } from '@tldraw/editor'
 import 'tldraw/tldraw.css'
 import { NoteShapeUtil } from './shapes/NoteShapeUtil'
 import { NOTE_TYPE } from './shapes/NoteShape'
+import { NoteColorPicker } from './components/NoteColorPicker'
 
 const shapeUtils = [NoteShapeUtil]
 
@@ -37,7 +38,9 @@ export default function App() {
         persistenceKey="obsidian-canvas"
         shapeUtils={shapeUtils}
         onMount={handleMount}
-      />
+      >
+        <NoteColorPicker />
+      </Tldraw>
     </div>
   )
 }
