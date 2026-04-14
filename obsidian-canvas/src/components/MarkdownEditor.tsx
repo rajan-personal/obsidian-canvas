@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { MarkdownRenderer } from './MarkdownRenderer'
 import '../styles/note.css'
 
@@ -11,6 +11,7 @@ interface MarkdownEditorProps {
 export function MarkdownEditor({ text, onSave, onClose }: MarkdownEditorProps) {
   const [value, setValue] = useState(text)
   const [tab, setTab] = useState<'edit' | 'preview'>('edit')
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const handleClose = useCallback(() => {
     onSave(value)
@@ -55,9 +56,25 @@ export function MarkdownEditor({ text, onSave, onClose }: MarkdownEditorProps) {
         <div className="md-editor-body">
           {tab === 'edit' ? (
             <textarea
+              ref={textareaRef}
               className="md-editor-textarea"
               value={value}
               onChange={(e) => setValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Tab') {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  const start = e.currentTarget.selectionStart
+                  const end = e.currentTarget.selectionEnd
+                  const newValue = value.substring(0, start) + '  ' + value.substring(end)
+                  setValue(newValue)
+                  setTimeout(() => {
+                    if (textareaRef.current) {
+                      textareaRef.current.selectionStart = textareaRef.current.selectionEnd = start + 2
+                    }
+                  }, 0)
+                }
+              }}
               placeholder="Write your markdown here..."
               autoFocus
             />
