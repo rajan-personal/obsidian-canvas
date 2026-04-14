@@ -61,9 +61,9 @@ export function MarkdownEditor({ text, onSave, onClose }: MarkdownEditorProps) {
               value={value}
               onChange={(e) => setValue(e.target.value)}
               onKeyDown={(e) => {
-                e.stopPropagation()
                 if (e.key === 'Tab') {
                   e.preventDefault()
+                  e.stopPropagation()
                   const start = e.currentTarget.selectionStart
                   const end = e.currentTarget.selectionEnd
                   const newValue = value.substring(0, start) + '  ' + value.substring(end)
